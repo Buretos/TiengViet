@@ -1,0 +1,50 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/Cargo.lock.bak
+src-tauri/gen/
+
+# Android (generated/local)
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/app/release/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/
+android/keystore.jks
+android/.idea/
+*.iml
+
+# Capacitor
+capacitor.config.local.json
+
+# Build outputs (на всякий случай — должны идти через GitHub Releases)
+*.apk
+*.aab
+*.exe
+*.dmg
+*.app
+*.AppImage
+*.deb
+*.msi
+*.rpm
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log

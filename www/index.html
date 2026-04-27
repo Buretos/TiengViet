@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Tiếng Việt — Вьетнамский</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="loading-logo">🇻🇳</div>
+  <div class="loading-title">Tiếng Việt</div>
+  <div class="loading-sub">Вьетнамский язык</div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+  <div class="loading-text">Загрузка данных курса...</div>
+</div>
+
+<!-- Main App -->
+<div id="app" style="display:none">
+
+  <!-- Header (dynamic) -->
+  <header id="app-header">
+    <button id="btn-back" class="btn-icon" onclick="App.goBack()" style="display:none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div id="header-title">Вьетнамский язык</div>
+    <div id="header-actions">
+      <div id="font-size-controls" style="display:none">
+        <button class="btn-icon font-sz-btn" onclick="LessonFont.decrease()" title="Уменьшить шрифт">A−</button>
+        <span id="font-sz-label" style="font-size:13px;color:var(--text-muted);min-width:30px;text-align:center">100%</span>
+        <button class="btn-icon font-sz-btn" onclick="LessonFont.increase()" title="Увеличить шрифт">A+</button>
+      </div>
+      <button class="btn-icon" id="btn-help" onclick="App.showHelp()" title="Справка" style="font-size:18px;font-weight:700;">?</button>
+    </div>
+  </header>
+
+  <!-- Screen: Home (Level Selection) -->
+  <div class="screen active" id="screen-home">
+    <div class="screen-content">
+      <div class="home-hero">
+        <div class="home-flag">🇻🇳</div>
+        <h1 class="home-title">Tiếng Việt</h1>
+        <p class="home-subtitle">Вьетнамский для русскоязычных</p>
+        <div class="home-stats" id="home-stats">300 уроков · 6 уровней</div>
+      </div>
+      <h2 class="section-heading">Выберите уровень</h2>
+      <div class="levels-grid" id="levels-grid"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Lesson List -->
+  <div class="screen" id="screen-lessons">
+    <div class="screen-content">
+      <div class="level-hero" id="level-hero"></div>
+      <div class="lessons-grid" id="lessons-grid"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Lesson Viewer -->
+  <div class="screen" id="screen-lesson">
+    <div class="screen-content" id="lesson-content">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+
+  <!-- Screen: Flashcards Browse -->
+  <div class="screen" id="screen-cards">
+    <div class="screen-content">
+      <div class="folders-header">
+        <h2 class="section-heading">Папки карточек</h2>
+        <div class="folders-header-btns">
+          <button class="btn-outline btn-sm" onclick="Cards.createCard()">+ Карточка</button>
+          <button class="btn-outline btn-sm" onclick="Cards.createFolder()">+ Папка</button>
+          <button class="btn-outline btn-sm" onclick="Cards.exportData()">📤 Экспорт</button>
+          <button class="btn-outline btn-sm" onclick="Cards.importDataPrompt()">📥 Импорт</button>
+        </div>
+      </div>
+      <div id="folders-list"></div>
+      <div class="section-sep"></div>
+      <h2 class="section-heading" id="cards-list-title">⭐ Карточки в папке «Избранное»</h2>
+      <div id="saved-cards-list"></div>
+    </div>
+  </div>
+
+  <!-- Screen: Flashcard Study -->
+  <div class="screen" id="screen-study">
+    <div class="screen-content" id="study-content"></div>
+  </div>
+
+  <!-- Screen: Folder Auto-Play -->
+  <div class="screen" id="screen-folder-play">
+    <div class="screen-content" id="folder-play-content"></div>
+  </div>
+
+  <!-- Screen: Writing Practice -->
+  <div class="screen" id="screen-writing">
+    <div class="screen-content">
+      <div class="writing-setup" id="writing-setup">
+        <div class="setup-card">
+          <div class="setup-icon">✏️</div>
+          <h2>Практика письма</h2>
+          <p>Вам показывается перевод на русском языке. Напишите правильную фразу на вьетнамском.</p>
+          <div class="setup-options">
+            <div class="option-row">
+              <label>Папка:</label>
+              <select id="writing-source-select" class="select-input">
+              </select>
+            </div>
+          </div>
+          <button class="btn-primary btn-lg" onclick="Writing.start()">Начать практику</button>
+        </div>
+      </div>
+      <div class="writing-session" id="writing-session" style="display:none">
+        <div class="writing-progress">
+          <span id="writing-progress-text">1 / 20</span>
+          <div class="progress-bar"><div class="progress-fill" id="writing-progress-bar"></div></div>
+        </div>
+        <div class="writing-card">
+          <div class="wcard-lesson" id="wcard-lesson"></div>
+          <div class="wcard-ru" id="wcard-ru"></div>
+          <button class="btn-tts-inline" onclick="Writing.speakRu()">🔊 Послушать</button>
+          <div class="wcard-input-row">
+            <textarea id="wcard-input" class="wcard-textarea"
+              placeholder="Введите вьетнамскую фразу..."
+              rows="2"
+              lang="vi"
+              inputmode="text"
+              autocapitalize="none"
+              oninput="Writing.onInput(this)"></textarea>
+            <button class="btn-primary" id="wcard-submit" onclick="Writing.check()">Проверить</button>
+          </div>
+          <div class="wcard-hint" id="wcard-hint" style="display:none">
+            <button class="btn-text" id="wcard-hint-btn" onclick="Writing.toggleHint()">💡 Подсказка</button>
+            <div id="wcard-hint-text" style="display:none;color:var(--accent);font-size:13px;font-family:monospace;margin-top:6px"></div>
+          </div>
+          <div class="wcard-result" id="wcard-result" style="display:none"></div>
+          <div class="wcard-actions" id="wcard-actions" style="display:none">
+            <button class="btn-secondary" onclick="Writing.next()">Следующая →</button>
+          </div>
+        </div>
+        <button class="btn-text-danger" onclick="Writing.stop()">Завершить сессию</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen: Search -->
+  <div class="screen" id="screen-search">
+    <div class="screen-content">
+      <div class="search-bar-wrap">
+        <div class="search-bar">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="Поиск по фразам..."
+            lang="vi" inputmode="text" autocapitalize="none"
+            oninput="Search.onInput(this)">
+          <button class="search-clear" id="search-clear" onclick="Search.clear()" style="display:none">✕</button>
+        </div>
+        <div class="search-filters">
+          <button class="filter-btn active" data-filter="all" onclick="Search.setFilter('all', this)">Всё</button>
+          <button class="filter-btn" data-filter="vi" onclick="Search.setFilter('vi', this)">Вьетнамский</button>
+          <button class="filter-btn" data-filter="ru" onclick="Search.setFilter('ru', this)">Русский</button>
+        </div>
+      </div>
+      <div id="search-results">
+        <div class="search-empty">
+          <div class="search-empty-icon">🔍</div>
+          <p>Введите слово или фразу для поиска<br>по всем 300 урокам курса</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen: Help -->
+  <div class="screen" id="screen-help">
+    <div class="screen-content">
+      <div class="help-hero">
+        <div class="help-hero-icon">📖</div>
+        <h1 class="help-hero-title">Справка</h1>
+        <p class="help-hero-sub">Как пользоваться приложением</p>
+      </div>
+
+      <details class="help-section" open>
+        <summary>🏠 Главный экран и уровни</summary>
+        <div class="help-body">
+          <p>Сетка из 6 уровней: <b>A0 · A1 · A2 · B1 · B2 · C1</b>. У каждого свой цвет. Тап по уровню — список из 50 уроков.</p>
+          <p>Прогресс по урокам сохраняется автоматически: при просмотре и при полностью прослушанном авто-плее.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>🎧 Урок: озвучка и сохранение</summary>
+        <div class="help-body">
+          <p>В шапке урока — два ряда контролов:</p>
+          <p><b>Плеер:</b></p>
+          <ul>
+            <li><b>▶ Авто-плей</b> — последовательное проигрывание всех фраз урока</li>
+            <li><b>🐢 / 🚶 / 🏃</b> — скорость TTS (0.5× / 1.0× / 1.6×)</li>
+            <li><b>📵 Фон</b> — на Android продолжать звук при выключенном экране</li>
+          </ul>
+          <p><b>На каждой фразе:</b></p>
+          <ul>
+            <li><b>🔊 VIE</b> — озвучить вьетнамский</li>
+            <li><b>🔊 RU</b> — озвучить русский</li>
+            <li><b>☆ → ★</b> — сохранить в папку «Избранное»</li>
+          </ul>
+          <p>Повторное нажатие 🔊 — стоп. Размер шрифта урока меняется кнопками <b>A−</b> / <b>A+</b> в шапке.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>🎙️ Переключатель TTS-движка</summary>
+        <div class="help-body">
+          <p>В шапке урока и плеера папки есть переключатель:</p>
+          <ul>
+            <li><b>🌐 Google Translate</b> — голос Google Translate. Нужен интернет</li>
+            <li><b>🔵 Системный TTS</b> — голоса операционной системы</li>
+          </ul>
+          <p><b>Что выбирать:</b></p>
+          <ul>
+            <li><b>Android:</b> 🔵 Системный TTS — там встроенный Google TTS работает идеально</li>
+            <li><b>Windows:</b> 🌐 Google Translate — в Windows нет голоса vi-VN, и Google проксируется через приложение</li>
+          </ul>
+          <p>При сбое Google Translate на Windows автоматически сработает резерв — увидите красное предупреждение «⚠️ Google TTS недоступен — играю системным голосом».</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>▶ Авто-плей урока</summary>
+        <div class="help-body">
+          <p>Последовательность для каждой фразы:</p>
+          <ol>
+            <li><b>Проход 1:</b> RU → 1.8 с → VI → 1.5 с → VI → 2 с</li>
+            <li><b>Проход 2:</b> только VI → 2 с</li>
+          </ol>
+          <p>Внизу всплывает плавающий бар с прогрессом, кнопками ⏸ Пауза и ⏹ Стоп. Любое нажатие 🔊 на отдельной фразе останавливает авто-плей.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>📇 Карточки и папки</summary>
+        <div class="help-body">
+          <p>Вкладка <b>«Карточки»</b>:</p>
+          <ul>
+            <li><b>+ Карточка</b> — создать свою (vi/ru/заметка/папка). Свои помечены ✏️</li>
+            <li><b>+ Папка</b> — создать новую папку</li>
+            <li>На каждой папке: <b>▶</b> авто-плей, <b>Учить</b> флэшкарты, <b>🗑</b> удалить</li>
+            <li>Тап на карточку — меню перемещения в другую папку</li>
+            <li><b>🗑</b> на карточке — удалить</li>
+          </ul>
+          <p>В авто-плее папки добавлена кнопка <b>🔁 Повтор</b> — зацикленное проигрывание для пассивного прослушивания.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>🎓 Режим «Учить» (флэшкарты)</summary>
+        <div class="help-body">
+          <ol>
+            <li>На карте — русский перевод. Попробуйте вспомнить вьетнамский.</li>
+            <li>Тап по карте — переворот, показывает vi-фразу + автоматическая озвучка.</li>
+            <li>Кнопки <b>«Знаю»</b> и <b>«Не знаю»</b>.</li>
+            <li>В конце сессии — повторение только «не знаю».</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>✏️ Письмо (Telex-ввод)</summary>
+        <div class="help-body">
+          <p>Тренировка набора фраз. Выбираете папку, нажимаете <b>Начать практику</b> — приложение даёт случайные фразы из неё.</p>
+          <p>Показывают русский перевод (с кнопкой <b>🔊 Послушать</b>) — введите вьетнамский. Поле поддерживает <b>Telex-ввод</b> — даёт набирать вьетнамские буквы с обычной клавиатуры:</p>
+          <table class="help-table">
+            <tr><th>Буква</th><th>Сочетание</th></tr>
+            <tr><td><b>â / ê / ô</b></td><td><code>aa / ee / oo</code></td></tr>
+            <tr><td><b>ă</b></td><td><code>aw</code></td></tr>
+            <tr><td><b>ơ / ư</b></td><td><code>ow / uw</code></td></tr>
+            <tr><td><b>đ</b></td><td><code>dd</code></td></tr>
+            <tr><th colspan="2">Тоны (после гласной)</th></tr>
+            <tr><td><b>á</b> sắc</td><td><code>as</code></td></tr>
+            <tr><td><b>à</b> huyền</td><td><code>af</code></td></tr>
+            <tr><td><b>ả</b> hỏi</td><td><code>ar</code></td></tr>
+            <tr><td><b>ã</b> ngã</td><td><code>ax</code></td></tr>
+            <tr><td><b>ạ</b> nặng</td><td><code>aj</code></td></tr>
+            <tr><td>сбросить тон</td><td><code>z</code></td></tr>
+          </table>
+          <p>Пример: <code>Toi ddi hocj</code> → <b>Tôi đi học</b>.</p>
+          <p>Сравнение проверяет точные диакритики и тоны (регистр и пробелы — нет). Кнопка <b>💡 Подсказка</b> показывает первые символы.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>🔍 Поиск</summary>
+        <div class="help-body">
+          <p>Поиск по всем 300 урокам. Фильтры: <b>Всё</b> / <b>Вьетнамский</b> / <b>Русский</b>.</p>
+          <p>Поле тоже поддерживает Telex — можно искать вьетнамское без вьетнамской раскладки. Тап на результат — открывает урок и прокручивает к нужной фразе.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>📤📥 Синхронизация (экспорт / импорт)</summary>
+        <div class="help-body">
+          <p>На вкладке «Карточки»:</p>
+          <ul>
+            <li><b>📤 Экспорт</b> — сохраняет все папки и карточки в JSON-файл</li>
+            <li><b>📥 Импорт</b> — загружает файл с другого устройства</li>
+          </ul>
+          <p><b>На Android</b> экспорт открывает системный шер — выбираете куда сохранить (Downloads / Drive / Telegram / e-mail). Копия также кладётся в <b>Documents/</b> — найдёте через приложение «Files».</p>
+          <p><b>На Windows</b> файл скачивается в стандартную папку <b>Downloads</b>.</p>
+          <p>При импорте появится диалог с выбором режима:</p>
+          <ul>
+            <li><b>➕ Дополнить</b> — добавляет только отсутствующие папки и карточки. Существующие не трогаются.</li>
+            <li><b>♻️ Заменить</b> — стирает локальное и кладёт содержимое файла. С подтверждением.</li>
+          </ul>
+          <p>Формат файла одинаков для Android и Windows — экспорт с одного устройства легко импортируется на другом.</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>💾 Где хранятся данные</summary>
+        <div class="help-body">
+          <p>Все ваши карточки, папки, прогресс и настройки лежат в <code>localStorage</code> приложения:</p>
+          <ul>
+            <li><code>viet_cards</code> — карточки</li>
+            <li><code>viet_folders</code> — папки</li>
+            <li><code>viet_progress</code> — прогресс по урокам</li>
+            <li><code>viet_tts_mode</code> — выбор движка TTS</li>
+          </ul>
+          <p><b>Базы Android и Windows независимы.</b> Для синхронизации используйте 📤 Экспорт / 📥 Импорт.</p>
+          <p><b>Совет:</b> делайте экспорт перед обновлением приложения или сменой устройства. Файл маленький (~1–10 KB).</p>
+        </div>
+      </details>
+
+      <details class="help-section">
+        <summary>❓ Частые вопросы</summary>
+        <div class="help-body">
+          <p><b>Первая фраза 🔊 запускается с задержкой.</b><br>TTS грузит mp3 / инициализирует движок. Следующие фразы — мгновенно.</p>
+          <p><b>На Windows вьетнамский звучит странно или по-русски.</b><br>Активен 🔵 Системный TTS, в Windows нет голоса vi-VN. Переключите на 🌐 Google Translate.</p>
+          <p><b>Импорт ничего не делает.</b><br>Файл должен быть JSON именно от этого приложения (с полем <code>"app": "viet-learn"</code>).</p>
+          <p><b>Хочу очистить все карточки.</b><br>Импортируйте пустой файл в режиме ♻️ Заменить.</p>
+        </div>
+      </details>
+
+      <div style="height:30px"></div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Bottom Navigation -->
+<nav id="bottom-nav" style="display:none">
+  <button class="nav-btn active" data-screen="home" onclick="App.showTab('home', this)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Уроки</span>
+  </button>
+  <button class="nav-btn" data-screen="cards" onclick="App.showTab('cards', this)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 6V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v1" stroke="currentColor" stroke-width="1.8"/><path d="M12 12v4m-2-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Карточки</span>
+  </button>
+  <button class="nav-btn" data-screen="writing" onclick="App.showTab('writing', this)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Письмо</span>
+  </button>
+  <button class="nav-btn" data-screen="search" onclick="App.showTab('search', this)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Поиск</span>
+  </button>
+</nav>
+
+<!-- Floating auto-play controls -->
+<div id="autoplay-bar" style="display:none">
+  <div class="ap-bar-info">
+    <span id="ap-bar-lesson"></span>
+    <span id="ap-bar-status"></span>
+  </div>
+  <div class="ap-bar-controls">
+    <button class="ap-btn" id="ap-pause-btn" onclick="AutoPlay.togglePause()">⏸</button>
+    <button class="ap-btn" id="ap-stop-btn" onclick="AutoPlay.stop()">⏹</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast"></div>
+
+<script src="js/lessons_data.js"></script>
+<script src="js/viet_telex.js"></script>
+<script src="js/app.js"></script>
+<script src="js/tts.js"></script>
+<script src="js/autoplay.js"></script>
+<script src="js/flashcards.js"></script>
+<script src="js/writing.js"></script>
+<script src="js/search.js"></script>
+<script>
+  // Initialize app after all scripts loaded
+  window.addEventListener('load', () => App.init());
+</script>
+</body>
+</html>

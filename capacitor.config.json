@@ -1,0 +1,29 @@
+{
+  "appId": "com.vietapp.learn",
+  "appName": "TiengViet",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false,
+    "buildOptions": {
+      "keystorePath": "keystore.jks",
+      "keystoreAlias": "vietapp"
+    }
+  },
+  "plugins": {
+    "TextToSpeech": {},
+    "StatusBar": {
+      "style": "Light",
+      "backgroundColor": "#f0f7f4"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "light"
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,160 @@
+name: Build all platforms
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Создать черновик GitHub Release из артефактов'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  # ==================== TAURI: Windows / macOS / Linux ====================
+  tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: universal-apple-darwin
+            rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
+            args: '--target universal-apple-darwin'
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            rust_targets: ''
+            args: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            rust_targets: ''
+            args: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: ${{ matrix.target }}
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Install npm deps
+        run: npm ci || npm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: 'TiengViet ${{ github.ref_name }}'
+          releaseBody: |
+            Сборки для всех платформ. Установка не требует прав администратора.
+
+            **macOS:** при первом запуске .app — правый клик → Открыть → подтвердите (приложение не подписано Apple Developer ID).
+            **Windows:** SmartScreen покажет «Неизвестный издатель» → Подробнее → Выполнить в любом случае.
+            **Linux:** запустите `chmod +x *.AppImage && ./TiengViet*.AppImage`.
+            **Android:** см. отдельный артефакт `TiengViet-vX.Y.apk` в job `android`.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Upload artifacts (when no release)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.target }}
+          path: |
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.app
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/**/release/bundle/**/*.exe
+            src-tauri/target/**/release/bundle/**/*.msi
+            src-tauri/target/**/release/bundle/**/*.dmg
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ==================== ANDROID APK (Capacitor + Gradle) ====================
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install npm deps
+        run: npm ci || npm install
+
+      - name: Sync Capacitor → Android
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          VERSION="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             artifacts/TiengViet-${VERSION}.apk
+          ls -lh artifacts/
+
+      - name: Upload APK as artifact (always)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/*.apk
+          retention-days: 14
+
+      - name: Attach APK to release (only on tag push)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.apk
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

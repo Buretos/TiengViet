@@ -1,0 +1,50 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "TiengViet",
+  "version": "3.1.0",
+  "identifier": "com.vietapp.learn",
+  "build": {
+    "frontendDist": "../www"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Tiếng Việt — Учим вьетнамский",
+        "width": 1100,
+        "height": 800,
+        "minWidth": 480,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg", "app", "appimage", "deb"],
+    "category": "Education",
+    "shortDescription": "Вьетнамский язык для русскоязычных",
+    "longDescription": "Tiếng Việt — приложение для изучения вьетнамского. 6 уровней (A0–C1), 300 уроков, ~24 000 фраз, ~17 000 слов. Озвучка через Google Translate / системный TTS. Карточки, авто-плей, режим письма с Telex-вводом, поиск по всему курсу.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "exceptionDomain": "translate.google.com"
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
+  }
+}
