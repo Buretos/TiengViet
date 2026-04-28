@@ -7,9 +7,15 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
@@ -38,6 +44,13 @@ public class BackgroundTtsPlugin extends Plugin {
     private static final String CHANNEL_ID = "vietapp_tts";
     private static final int NOTIFICATION_ID = 1001;
 
+    // Process-wide flag so MainActivity can keep the WebView running when AutoPlay is on.
+    private static volatile boolean sBackgroundActive = false;
+
+    public static boolean isBackgroundActive() {
+        return sBackgroundActive;
+    }
+
     private TextToSpeech tts;
     private boolean ttsReady = false;
     private boolean backgroundMode = false;
@@ -45,9 +58,24 @@ public class BackgroundTtsPlugin extends Plugin {
     private PluginCall pendingSpeakCall = null;
     private String currentUtteranceId = null;
 
+    // Audio focus
+    private AudioManager audioManager;
+    private AudioFocusRequest audioFocusRequest;
+    private AudioManager.OnAudioFocusChangeListener focusChangeListener = focusChange -> {
+        // We don't react to focus changes — we want to keep the audio focus while playback is active
+    };
+
+    // Native delay scheduler (own thread so it isn't held back by main-thread/WebView throttling)
+    private HandlerThread delayThread;
+    private Handler delayHandler;
+
     @Override
     public void load() {
         initTts();
+        delayThread = new HandlerThread("BgTtsDelay");
+        delayThread.start();
+        delayHandler = new Handler(delayThread.getLooper());
+        audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
     }
 
     private void initTts() {
@@ -129,14 +157,19 @@ public class BackgroundTtsPlugin extends Plugin {
     @PluginMethod
     public void enableBackground(PluginCall call) {
         backgroundMode = true;
+        sBackgroundActive = true;
+        ensureNotificationChannel();
         acquireWakeLock();
         startForegroundService();
+        requestAudioFocus();
         call.resolve();
     }
 
     @PluginMethod
     public void disableBackground(PluginCall call) {
         backgroundMode = false;
+        sBackgroundActive = false;
+        abandonAudioFocus();
         releaseWakeLock();
         stopForegroundService();
         call.resolve();
@@ -147,16 +180,79 @@ public class BackgroundTtsPlugin extends Plugin {
         call.resolve(new JSObject().put("ready", ttsReady));
     }
 
+    /**
+     * Native delay scheduled on a dedicated HandlerThread.
+     * This bypasses WebView background timer throttling (which clamps setTimeout
+     * to once-per-minute when the tab is silent), so AutoPlay's inter-phrase
+     * pauses keep the right cadence with the screen off.
+     */
+    @PluginMethod
+    public void delay(PluginCall call) {
+        long ms = call.getLong("ms", 0L);
+        if (ms <= 0) {
+            call.resolve();
+            return;
+        }
+        if (delayHandler == null) {
+            // Fallback (shouldn't happen — load() initialises it)
+            call.resolve();
+            return;
+        }
+        delayHandler.postDelayed(call::resolve, ms);
+    }
+
+    private void requestAudioFocus() {
+        if (audioManager == null) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (audioFocusRequest != null) return;
+                AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build();
+                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(attrs)
+                    .setWillPauseWhenDucked(false)
+                    .setAcceptsDelayedFocusGain(false)
+                    .setOnAudioFocusChangeListener(focusChangeListener)
+                    .build();
+                audioManager.requestAudioFocus(audioFocusRequest);
+            } else {
+                audioManager.requestAudioFocus(focusChangeListener,
+                    AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "requestAudioFocus failed", t);
+        }
+    }
+
+    private void abandonAudioFocus() {
+        if (audioManager == null) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (audioFocusRequest != null) {
+                    audioManager.abandonAudioFocusRequest(audioFocusRequest);
+                    audioFocusRequest = null;
+                }
+            } else {
+                audioManager.abandonAudioFocus(focusChangeListener);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "abandonAudioFocus failed", t);
+        }
+    }
+
     private void acquireWakeLock() {
         if (wakeLock != null && wakeLock.isHeld()) return;
         PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VietApp:TtsPLaying");
-        wakeLock.acquire(3600000L); // Max 1 hour
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VietApp:TtsPlaying");
+        wakeLock.setReferenceCounted(false);
+        wakeLock.acquire(3 * 3600000L); // up to 3 hours, released explicitly on stop
     }
 
     private void releaseWakeLock() {
         if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+            try { wakeLock.release(); } catch (Throwable ignored) {}
             wakeLock = null;
         }
     }
@@ -173,6 +269,22 @@ public class BackgroundTtsPlugin extends Plugin {
     private void stopForegroundService() {
         Intent serviceIntent = new Intent(getContext(), TtsForegroundService.class);
         getContext().stopService(serviceIntent);
+    }
+
+    private void ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
+        NotificationChannel ch = new NotificationChannel(
+            CHANNEL_ID,
+            "Воспроизведение вьетнамского",
+            NotificationManager.IMPORTANCE_LOW
+        );
+        ch.setDescription("Фоновое воспроизведение уроков");
+        ch.setShowBadge(false);
+        ch.setSound(null, null);
+        nm.createNotificationChannel(ch);
     }
 
     private void updateNotification(String text) {
@@ -195,7 +307,14 @@ public class BackgroundTtsPlugin extends Plugin {
             tts.stop();
             tts.shutdown();
         }
+        sBackgroundActive = false;
+        abandonAudioFocus();
         releaseWakeLock();
+        if (delayThread != null) {
+            try { delayThread.quitSafely(); } catch (Throwable ignored) {}
+            delayThread = null;
+            delayHandler = null;
+        }
         super.handleOnDestroy();
     }
 }

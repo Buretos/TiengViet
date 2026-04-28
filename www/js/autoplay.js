@@ -9,7 +9,7 @@ const AutoPlay = (() => {
   let _btnViClass = '';
   let _currentCard = null;
   let _pauseTimer = null;
-  let _backgroundMode = false;
+  let _bgActive = false;
   let _resolveWait = null;
   let _customLabel = null;
   let _loopMode = false;
@@ -56,34 +56,23 @@ const AutoPlay = (() => {
     }
   }
 
-  function toggleBackground() {
-    _backgroundMode = !_backgroundMode;
-    const btn = document.getElementById('bg-audio-btn');
-    if (btn) {
-      btn.textContent = _backgroundMode ? '📵 Фон: ВКЛ' : '📵 Фон';
-      btn.classList.toggle('active', _backgroundMode);
-    }
-    if (_backgroundMode) {
-      _enableBackgroundMode();
-      App.showToast('Режим фона включён. Можно выключить экран.');
-    } else {
-      _disableBackgroundMode();
-    }
-  }
-
   function _enableBackgroundMode() {
-    // Use our custom BackgroundTts plugin
+    if (_bgActive) return;
+    _bgActive = true;
     if (window.Capacitor?.isPluginAvailable?.('BackgroundTts')) {
-      window.Capacitor.Plugins.BackgroundTts.enableBackground();
-      return;
+      try { window.Capacitor.Plugins.BackgroundTts.enableBackground(); } catch(e) {}
     }
-    // Web fallback: keep audio context alive with silent audio
+    // Always run the silent keep-alive: Chromium WebView throttles setTimeout
+    // to once-per-minute when the page is "silent", so we keep an AudioContext
+    // streaming silence to mark the page as actively playing audio.
     _keepAlive();
   }
 
   function _disableBackgroundMode() {
+    if (!_bgActive) return;
+    _bgActive = false;
     if (window.Capacitor?.isPluginAvailable?.('BackgroundTts')) {
-      window.Capacitor.Plugins.BackgroundTts.disableBackground();
+      try { window.Capacitor.Plugins.BackgroundTts.disableBackground(); } catch(e) {}
     }
     if (AutoPlay._keepAliveCtx) {
       try { AutoPlay._keepAliveCtx.close(); } catch(e) {}
@@ -92,14 +81,23 @@ const AutoPlay = (() => {
   }
 
   function _keepAlive() {
-    // Play a silent audio loop to prevent audio context from being suspended
+    if (AutoPlay._keepAliveCtx) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      // Silent looping buffer so the page stays "audible" even between TTS chunks
       const silentSrc = ctx.createBufferSource();
-      silentSrc.buffer = ctx.createBuffer(1, 1, 22050);
-      silentSrc.connect(ctx.destination);
+      silentSrc.buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       silentSrc.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      silentSrc.connect(gain).connect(ctx.destination);
       silentSrc.start();
+      // Some WebViews start the context in 'suspended' until a user gesture; resume defensively
+      if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+        ctx.resume().catch(() => {});
+      }
       AutoPlay._keepAliveCtx = ctx;
     } catch(e) {}
   }
@@ -109,6 +107,9 @@ const AutoPlay = (() => {
     _active = true;
     _stopped = false;
     _paused = false;
+
+    // Always run in background-friendly mode: keeps audio alive with screen off
+    _enableBackgroundMode();
 
     _updateBtn();
     _showBar();
@@ -201,6 +202,15 @@ const AutoPlay = (() => {
   }
 
   function _delay(ms) {
+    // Use plugin-side Handler.postDelayed when available — bypasses Chromium
+    // WebView's background timer throttling (which clamps setTimeout to ~1/min
+    // when the page is hidden, making JS-driven pauses stretch from 1.5s to 60s).
+    const plugin = window.Capacitor?.Plugins?.BackgroundTts;
+    if (plugin && typeof plugin.delay === 'function') {
+      return plugin.delay({ ms }).catch(() => new Promise(resolve => {
+        _pauseTimer = setTimeout(resolve, ms);
+      }));
+    }
     return new Promise(resolve => {
       _pauseTimer = setTimeout(resolve, ms);
     });
@@ -252,15 +262,8 @@ const AutoPlay = (() => {
     if (_currentCard) { _currentCard.classList.remove('ap-active'); _currentCard = null; }
     _updateBtn();
     _hideBar();
-    if (_backgroundMode) {
-      _backgroundMode = false;
-      _disableBackgroundMode();
-      if (AutoPlay._keepAliveCtx) {
-        try { AutoPlay._keepAliveCtx.close(); } catch(e) {}
-        AutoPlay._keepAliveCtx = null;
-      }
-    }
+    _disableBackgroundMode();
   }
 
-  return { setLesson, toggle, togglePause, toggleBackground, toggleLoop, setLoop, getLoop, stop };
+  return { setLesson, toggle, togglePause, toggleLoop, setLoop, getLoop, stop };
 })();

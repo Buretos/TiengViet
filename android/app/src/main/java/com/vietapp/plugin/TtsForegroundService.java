@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -23,17 +24,34 @@ public class TtsForegroundService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        startForeground(NOTIFICATION_ID, buildNotification("Вьетнамский язык — воспроизведение"));
+        startInForeground();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Re-arm in case Android demoted us
+        startInForeground();
         return START_STICKY;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private void startInForeground() {
+        Notification n = buildNotification("Вьетнамский язык — воспроизведение");
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                // Android 14+: must declare service type at runtime
+                startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(NOTIFICATION_ID, n);
+            }
+        } catch (Throwable t) {
+            // Last-resort fallback if the typed call is rejected (e.g. missing permission on some OEMs)
+            try { startForeground(NOTIFICATION_ID, n); } catch (Throwable ignored) {}
+        }
     }
 
     private void createNotificationChannel() {
