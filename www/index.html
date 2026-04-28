@@ -5,9 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tiếng Việt">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1a7a4f">
   <title>Tiếng Việt — Вьетнамский</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Apply persisted theme before first paint (avoids the light → dark flash)
+    (function () {
+      try {
+        var t = localStorage.getItem('viet_theme');
+        if (t !== 'dark' && t !== 'light') {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -35,6 +51,7 @@
         <span id="font-sz-label" style="font-size:13px;color:var(--text-muted);min-width:30px;text-align:center">100%</span>
         <button class="btn-icon font-sz-btn" onclick="LessonFont.increase()" title="Увеличить шрифт">A+</button>
       </div>
+      <button class="btn-icon" id="btn-theme" onclick="App.toggleTheme()" title="Сменить тему" style="font-size:16px;">🌙</button>
       <button class="btn-icon" id="btn-help" onclick="App.showHelp()" title="Справка" style="font-size:18px;font-weight:700;">?</button>
     </div>
   </header>
@@ -202,7 +219,7 @@
           <ul>
             <li><b>▶ Авто-плей</b> — последовательное проигрывание всех фраз урока</li>
             <li><b>🐢 / 🚶 / 🏃</b> — скорость TTS (0.5× / 1.0× / 1.6×)</li>
-            <li><b>📵 Фон</b> — на Android продолжать звук при выключенном экране</li>
+            <li>На Android звук продолжает играть автоматически и при выключенном экране — пока не нажать «⏹ Стоп».</li>
           </ul>
           <p><b>На каждой фразе:</b></p>
           <ul>
@@ -398,6 +415,13 @@
 <script>
   // Initialize app after all scripts loaded
   window.addEventListener('load', () => App.init());
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
 </script>
 </body>
 </html>

@@ -350,7 +350,6 @@ const Cards = (() => {
         <button class="ap-speed-btn active" data-speed="1.0" onclick="TTS.setSpeed(1.0, this)">🚶</button>
         <button class="ap-speed-btn" data-speed="1.6" onclick="TTS.setSpeed(1.6, this)">🏃</button>
         <button class="btn-ap" id="ap-loop-btn" onclick="AutoPlay.toggleLoop()">🔁 Повтор</button>
-        <button class="btn-ap" id="bg-audio-btn" onclick="AutoPlay.toggleBackground()">📵 Фон</button>
       </div>
       <div class="ap-controls tts-mode-row">
         <span class="tts-mode-label">🎙️ Движок:</span>
@@ -575,8 +574,30 @@ const Cards = (() => {
       }
     }
 
-    // Web / Tauri: классический blob-download
     const blob = new Blob([json], { type: 'application/json' });
+
+    // PWA / iPadOS Safari: системное меню "Поделиться" умеет сохранить
+    // файл в Files, iCloud Drive, мессенджер или другое приложение.
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], filename, { type: 'application/json' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'TiengViet — экспорт карточек',
+            text: `${payload.counts.cards} карточек, ${payload.counts.folders} папок`,
+            files: [file]
+          });
+          App.showToast('Файл готов — выберите куда сохранить');
+          return;
+        }
+      } catch (e) {
+        if (e && e.name !== 'AbortError') {
+          console.warn('Web Share export failed, falling back to download:', e);
+        }
+      }
+    }
+
+    // Web / Tauri fallback: классический blob-download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -630,16 +651,16 @@ const Cards = (() => {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:14px;padding:20px 22px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <div style="background:var(--bg-card);color:var(--text-primary);border-radius:14px;padding:20px 22px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
         <h3 style="margin:0 0 12px;font-size:18px;">Импорт карточек</h3>
-        <div style="font-size:14px;color:#444;line-height:1.5;margin-bottom:14px;">
+        <div style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:14px;">
           <div>В файле: <b>${incCards}</b> карточек, <b>${incFolders}</b> папок</div>
           <div>Сейчас в приложении: <b>${haveCards}</b> карточек, <b>${haveFolders}</b> папок</div>
           ${data.exportedAt ? `<div style="opacity:0.7;font-size:12px;margin-top:6px;">Экспорт от ${new Date(data.exportedAt).toLocaleString('ru-RU')}</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button id="imp-merge" class="btn-primary" style="width:100%;">➕ Дополнить (добавить недостающее)</button>
-          <button id="imp-replace" class="btn-outline" style="width:100%;color:#b71c1c;border-color:#b71c1c;">♻️ Заменить (стереть текущее)</button>
+          <button id="imp-replace" class="btn-outline" style="width:100%;color:var(--accent-red);border-color:var(--accent-red);">♻️ Заменить (стереть текущее)</button>
           <button id="imp-cancel" class="btn-text" style="width:100%;">Отмена</button>
         </div>
       </div>`;
