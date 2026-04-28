@@ -13,6 +13,9 @@ on:
         type: choice
         options: ['false', 'true']
 
+permissions:
+  contents: write
+
 jobs:
   # ==================== TAURI: Windows / macOS / Linux ====================
   tauri:

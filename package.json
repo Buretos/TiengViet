@@ -8,7 +8,8 @@
     "sync": "npx cap sync android",
     "open": "npx cap open android",
     "run": "npx cap run android",
-    "apk": "cd android && ./gradlew assembleDebug"
+    "apk": "cd android && ./gradlew assembleDebug",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^5.0.0",
