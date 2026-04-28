@@ -25,6 +25,29 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ===== Dark theme — applied via data-theme="dark" on <html> ===== */
+[data-theme="dark"] {
+  --bg-primary: #0f1419;
+  --bg-secondary: #161c24;
+  --bg-card: #1a2028;
+  --bg-example: #1d2a26;
+  --bg-rule: #15302a;
+  --bg-vocab: #15302a;
+  --bg-note: #2a2419;
+  --accent: #4ade80;
+  --accent-dark: #22c55e;
+  --accent-red: #f87171;
+  --accent-red-dark: #ef4444;
+  --text-primary: #e8edf2;
+  --text-secondary: #c2ccd6;
+  --text-muted: #8593a3;
+  --border: #2a3440;
+  --border-card: #2a3440;
+  --shadow: 0 2px 10px rgba(0,0,0,0.45);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.55);
+  color-scheme: dark;
+}
+
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
@@ -68,7 +91,7 @@ html, body {
 }
 #app-header {
   height: var(--header-height);
-  background: white;
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center;
   padding: 0 10px;
@@ -117,7 +140,7 @@ html, body {
   bottom: 0; left: 0; right: 0;
   height: calc(var(--nav-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
-  background: white;
+  background: var(--bg-secondary);
   border-top: 1px solid var(--border);
   display: flex;
   z-index: 200;
@@ -230,7 +253,7 @@ html, body {
   gap: 12px;
 }
 .level-card {
-  background: white; border-radius: var(--radius);
+  background: var(--bg-card); border-radius: var(--radius);
   padding: 20px 16px;
   cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
   box-shadow: var(--shadow);
@@ -280,7 +303,7 @@ html, body {
   display: flex; flex-direction: column; gap: 8px;
 }
 .lesson-item {
-  background: white; border-radius: var(--radius-sm);
+  background: var(--bg-card); border-radius: var(--radius-sm);
   padding: 14px 16px;
   cursor: pointer; transition: background 0.15s;
   box-shadow: var(--shadow);
@@ -383,7 +406,7 @@ html, body {
 
 /* ===== LESSON SECTIONS ===== */
 .lesson-section {
-  background: white; border-radius: var(--radius);
+  background: var(--bg-card); border-radius: var(--radius);
   padding: 20px 18px; margin-bottom: 14px;
   box-shadow: var(--shadow);
 }
@@ -458,7 +481,7 @@ html, body {
   vertical-align: middle;
 }
 .vocab-table tr:last-child td { border-bottom: none; }
-.vocab-table tr:hover td { background: #f9fff9; }
+.vocab-table tr:hover td { background: var(--bg-vocab); }
 .vocab-vi { font-weight: 700; color: var(--accent); }
 .vocab-pron { color: var(--text-muted); font-style: italic; font-size: 16px; }
 .vocab-btns { display: flex; gap: 4px; }
@@ -479,7 +502,7 @@ html, body {
 }
 .folders-header-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .folder-item {
-  background: white; border-radius: var(--radius);
+  background: var(--bg-card); border-radius: var(--radius);
   padding: 14px 16px; margin-bottom: 8px;
   display: flex; align-items: center; gap: 12px;
   cursor: pointer; transition: background 0.15s;
@@ -515,7 +538,7 @@ html, body {
 .section-sep { height: 1px; background: var(--border); margin: 16px 0; }
 
 .saved-card-item {
-  background: white; border-radius: var(--radius-sm);
+  background: var(--bg-card); border-radius: var(--radius-sm);
   padding: 12px 14px; margin-bottom: 8px;
   display: flex; align-items: flex-start; gap: 10px;
   box-shadow: var(--shadow);
@@ -548,7 +571,7 @@ html, body {
   border-radius: 3px; transition: width 0.3s;
 }
 .flashcard {
-  background: white; border-radius: 16px;
+  background: var(--bg-card); border-radius: 16px;
   box-shadow: var(--shadow-md);
   min-height: 200px;
   display: flex; flex-direction: column;
@@ -586,7 +609,7 @@ html, body {
 /* ===== WRITING PRACTICE ===== */
 .writing-setup { padding: 16px 0; }
 .setup-card {
-  background: white; border-radius: var(--radius);
+  background: var(--bg-card); border-radius: var(--radius);
   padding: 28px 22px;
   box-shadow: var(--shadow);
   text-align: center;
@@ -603,7 +626,7 @@ html, body {
 .select-input {
   flex: 1; padding: 8px 12px;
   border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 18px; background: white; color: var(--text-primary);
+  font-size: 18px; background: var(--bg-card); color: var(--text-primary);
   -webkit-appearance: none; appearance: none;
 }
 .writing-progress {
@@ -611,7 +634,7 @@ html, body {
 }
 .writing-progress-text { font-size: 18px; color: var(--text-muted); white-space: nowrap; }
 .writing-card {
-  background: white; border-radius: var(--radius);
+  background: var(--bg-card); border-radius: var(--radius);
   padding: 22px 18px; box-shadow: var(--shadow);
   margin-bottom: 12px;
 }
@@ -645,7 +668,7 @@ html, body {
 .search-bar-wrap { position: sticky; top: 0; z-index: 50; background: var(--bg-primary); padding-bottom: 10px; }
 .search-bar {
   display: flex; align-items: center;
-  background: white; border-radius: 12px;
+  background: var(--bg-card); border-radius: 12px;
   border: 1.5px solid var(--border);
   padding: 0 14px; gap: 8px;
   box-shadow: var(--shadow);
@@ -665,7 +688,7 @@ html, body {
 }
 .search-filters { display: flex; gap: 8px; margin-top: 8px; }
 .filter-btn {
-  background: white; border: 1.5px solid var(--border);
+  background: var(--bg-card); border: 1.5px solid var(--border);
   border-radius: 20px; padding: 5px 14px;
   font-size: 17px; cursor: pointer;
   color: var(--text-secondary); transition: all 0.15s;
@@ -674,7 +697,7 @@ html, body {
 /* Telex toggle button — shared by Writing and Search */
 .telex-toggle-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  background: white; border: 1.5px solid var(--border);
+  background: var(--bg-card); border: 1.5px solid var(--border);
   border-radius: 10px; padding: 8px 14px;
   font-size: 17px; cursor: pointer;
   color: var(--text-secondary); transition: all 0.15s;
@@ -700,7 +723,7 @@ html, body {
 }
 .search-empty-icon { font-size: 62px; margin-bottom: 12px; }
 .search-result-item {
-  background: white; border-radius: var(--radius-sm);
+  background: var(--bg-card); border-radius: var(--radius-sm);
   padding: 12px 14px; margin-bottom: 8px;
   cursor: pointer; transition: background 0.15s;
   box-shadow: var(--shadow);
@@ -780,7 +803,7 @@ html, body {
   padding: 20px;
 }
 .dialog {
-  background: white; border-radius: 16px;
+  background: var(--bg-card); border-radius: 16px;
   padding: 24px; max-width: 320px; width: 100%;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
 }
@@ -826,7 +849,7 @@ html, body {
 .help-hero-sub { font-size: 14px; opacity: 0.9; margin: 0; }
 
 .help-section {
-  background: white;
+  background: var(--bg-card);
   border-radius: var(--radius);
   margin-bottom: 10px;
   box-shadow: var(--shadow);
@@ -889,11 +912,11 @@ html, body {
   color: var(--text-primary);
 }
 
-#btn-help {
-  border: 1px solid rgba(0,0,0,0.12);
+#btn-help, #btn-theme {
+  border: 1px solid var(--border);
   border-radius: 50%;
   width: 32px; height: 32px;
-  background: white;
+  background: var(--bg-card);
   color: var(--accent);
   display: inline-flex;
   align-items: center;
@@ -901,13 +924,90 @@ html, body {
   cursor: pointer;
   margin-left: 6px;
 }
-#btn-help:hover { background: rgba(26,122,79,0.08); }
+#btn-help:hover, #btn-theme:hover { background: rgba(26,122,79,0.08); }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
 
-@media (prefers-color-scheme: dark) {
-  /* Keep light theme always - user specified light */
+/* ====================================================================
+   DARK-THEME OVERRIDES — patches for elements with hard-coded colors
+   that the CSS variables cannot reach (status colors, hover stripes,
+   yellow folder badges, etc.). Variable-driven elements pick up the
+   dark palette automatically.
+   ==================================================================== */
+[data-theme="dark"] body { background: var(--bg-primary); color: var(--text-primary); }
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+
+[data-theme="dark"] .vocab-table tr:hover td { background: rgba(74,222,128,0.08); }
+
+[data-theme="dark"] .help-section > summary:hover { background: rgba(74,222,128,0.07); }
+[data-theme="dark"] .help-body { border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .help-body code,
+[data-theme="dark"] .rule-formula {
+  background: rgba(74,222,128,0.12);
 }
+[data-theme="dark"] .help-body b { color: var(--text-primary); }
+[data-theme="dark"] .help-table th { background: rgba(74,222,128,0.10); color: var(--text-primary); }
+[data-theme="dark"] .help-table th, [data-theme="dark"] .help-table td { border-bottom-color: rgba(255,255,255,0.10); }
+[data-theme="dark"] #btn-help, [data-theme="dark"] #btn-theme { border-color: var(--border); }
+[data-theme="dark"] #btn-help:hover, [data-theme="dark"] #btn-theme:hover { background: rgba(74,222,128,0.10); }
+[data-theme="dark"] .btn-icon:hover { background: rgba(255,255,255,0.06); }
+
+[data-theme="dark"] .example-card { border-color: var(--border-card); }
+[data-theme="dark"] .example-card.search-highlight { outline-color: #f59e0b; }
+
+/* Status / feedback colors — make them readable on dark */
+[data-theme="dark"] .wcard-result.correct { background: #14532d; color: #86efac; }
+[data-theme="dark"] .wcard-result.wrong   { background: #7f1d1d; color: #fecaca; }
+[data-theme="dark"] .wcard-result.close   { background: #713f12; color: #fde68a; }
+[data-theme="dark"] .btn-know   { background: #14532d; color: #86efac; }
+[data-theme="dark"] .btn-know:hover { background: #16a34a; color: white; }
+[data-theme="dark"] .btn-unknown { background: #7f1d1d; color: #fecaca; }
+[data-theme="dark"] .btn-unknown:hover { background: #ef4444; color: white; }
+[data-theme="dark"] .btn-text-danger { color: #f87171; }
+[data-theme="dark"] .unsave-btn { color: #f87171; }
+[data-theme="dark"] .unsave-btn:hover { background: rgba(248,113,113,0.15); }
+[data-theme="dark"] .btn-danger { background: #ef4444; }
+[data-theme="dark"] .btn-danger:hover { background: #dc2626; }
+
+[data-theme="dark"] .search-result-badge-folder { background: #422006; color: #fcd34d; }
+[data-theme="dark"] .saved-card-custom { border-left-color: var(--accent); }
+[data-theme="dark"] .folder-item-active { background: rgba(74,222,128,0.10); }
+[data-theme="dark"] .folder-item:active { background: rgba(74,222,128,0.10); }
+[data-theme="dark"] .lesson-item:active { background: rgba(74,222,128,0.10); }
+[data-theme="dark"] .search-result-item:active { background: rgba(74,222,128,0.10); }
+
+[data-theme="dark"] .lesson-num { background: rgba(74,222,128,0.12); }
+[data-theme="dark"] .lesson-num.done { background: var(--accent); color: #0f1419; }
+
+[data-theme="dark"] .home-stats { background: rgba(74,222,128,0.12); color: var(--accent); }
+[data-theme="dark"] .level-card-badge { color: #0f1419; }
+[data-theme="dark"] .filter-btn { color: var(--text-secondary); }
+[data-theme="dark"] .filter-btn.active { color: #0f1419; }
+
+[data-theme="dark"] .btn-primary { color: #0f1419; }
+[data-theme="dark"] .btn-primary:hover { color: #0f1419; }
+[data-theme="dark"] .btn-secondary { background: rgba(74,222,128,0.12); }
+[data-theme="dark"] .btn-secondary:hover { background: var(--accent); color: #0f1419; }
+[data-theme="dark"] .btn-outline:hover { color: #0f1419; }
+
+[data-theme="dark"] .telex-toggle-btn { color: var(--text-secondary); }
+[data-theme="dark"] .telex-toggle-btn.telex-on { background: rgba(74,222,128,0.12); }
+[data-theme="dark"] .telex-hint { background: rgba(74,222,128,0.10); color: var(--text-secondary); }
+
+[data-theme="dark"] .rule-title, [data-theme="dark"] .rule-formula { color: var(--accent); }
+[data-theme="dark"] .vocab-table th { background: rgba(74,222,128,0.08); color: var(--text-muted); }
+
+/* Lesson header / level hero use a level-color gradient (red/green/blue/purple)
+   from data — keep them but override the red headline used inline for level A0
+   so it stays readable on dark cards inside the lesson. */
+[data-theme="dark"] .example-vi[style*="color:#b71c1c"],
+[data-theme="dark"] [style*="color:#b71c1c"] {
+  color: var(--accent-red) !important;
+}
+
+/* Don't render images darkened — none here, but keep brand emojis crisp */
+[data-theme="dark"] img { filter: none; }

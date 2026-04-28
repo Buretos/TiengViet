@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tiengviet-pwa-v1';
+const CACHE_NAME = 'tiengviet-pwa-v2';
 
 const APP_SHELL = [
   './',

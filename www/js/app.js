@@ -21,6 +21,9 @@ const App = (() => {
     }
     _data = window.LESSONS_DATA;
 
+    // Sync the header toggle icon with the theme already applied in <head>
+    _updateThemeButton();
+
     // Init subsystems
     TTS.init();
     Cards.init(_data);
@@ -37,6 +40,23 @@ const App = (() => {
       document.getElementById('app').style.display = 'flex';
       document.getElementById('bottom-nav').style.display = 'flex';
     }, 1200);
+  }
+
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('viet_theme', next); } catch(e) {}
+    _updateThemeButton();
+    showToast(next === 'dark' ? '🌙 Тёмная тема' : '☀️ Светлая тема');
+  }
+
+  function _updateThemeButton() {
+    const btn = document.getElementById('btn-theme');
+    if (!btn) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    btn.textContent = isDark ? '☀️' : '🌙';
+    btn.title = isDark ? 'Светлая тема' : 'Тёмная тема';
   }
 
   function _renderLevels() {
@@ -168,7 +188,8 @@ const App = (() => {
           usedKeys.add(sec.id);
         }
 
-        if (!allExamples.length && !sec.title) return '';
+        // Skip sections without any example cards — those render as visually empty rule blocks
+        if (!allExamples.length) return '';
         const exHtml = allExamples.map(e => _renderExampleCard(e, lesson, color)).join('');
         return `<div class="lesson-section" id="ls-${sec.id}">\n<div class="lesson-section-title">${sec.title || sec.id}</div>\n${exHtml}\n</div>`;
       }).filter(Boolean).join('');
@@ -231,7 +252,6 @@ const App = (() => {
         <button class="ap-speed-btn" data-speed="0.5" onclick="TTS.setSpeed(0.5, this)">🐢</button>
         <button class="ap-speed-btn active" data-speed="1.0" onclick="TTS.setSpeed(1.0, this)">🚶</button>
         <button class="ap-speed-btn" data-speed="1.6" onclick="TTS.setSpeed(1.6, this)">🏃</button>
-        <button class="btn-ap" id="bg-audio-btn" onclick="AutoPlay.toggleBackground()">📵 Фон</button>
       </div>
       <div class="ap-controls tts-mode-row">
         <span class="tts-mode-label">🎙️ Движок:</span>
@@ -420,7 +440,7 @@ const App = (() => {
     if (screen) screen.scrollTop = 0;
   }
 
-  return { init, showLevel, showLesson, showLessonAt, showTab, goBack, showToast, getLessons, getData, getCurrentLesson, pushScreen, setTtsMode, showHelp };
+  return { init, showLevel, showLesson, showLessonAt, showTab, goBack, showToast, getLessons, getData, getCurrentLesson, pushScreen, setTtsMode, showHelp, toggleTheme };
 })();
 
 /* ===== LESSON FONT SIZE CONTROL ===== */
