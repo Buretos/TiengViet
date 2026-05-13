@@ -252,11 +252,9 @@ const App = (() => {
         <button class="ap-speed-btn" data-speed="0.5" onclick="TTS.setSpeed(0.5, this)">🐢</button>
         <button class="ap-speed-btn active" data-speed="1.0" onclick="TTS.setSpeed(1.0, this)">🚶</button>
         <button class="ap-speed-btn" data-speed="1.6" onclick="TTS.setSpeed(1.6, this)">🏃</button>
-      </div>
-      <div class="ap-controls tts-mode-row">
-        <span class="tts-mode-label">🎙️ Движок:</span>
-        <button class="tts-mode-btn ${TTS.getMode()==='gtranslate'?'active':''}" data-mode="gtranslate" onclick="App.setTtsMode('gtranslate')">🌐 Google Translate</button>
-        <button class="tts-mode-btn ${TTS.getMode()==='webspeech'?'active':''}" data-mode="webspeech" onclick="App.setTtsMode('webspeech')">🔵 Системный TTS</button>
+        ${TTS.renderModeButton()}
+        <button class="btn-ap" id="ap-vionly-btn" onclick="AutoPlay.startViOnly()">🇻🇳 Вьет-плей</button>
+        <button class="btn-ap" id="ap-loop-btn" onclick="AutoPlay.toggleLoop()">🔁 Повтор</button>
       </div>
     </div>
 
@@ -424,13 +422,6 @@ const App = (() => {
     return String(s || '').replace(/'/g,"\\'").replace(/\n/g,' ');
   }
 
-  function setTtsMode(mode) {
-    TTS.setMode(mode);
-    document.querySelectorAll('.tts-mode-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === mode);
-    });
-  }
-
   function showHelp() {
     AutoPlay.stop();
     pushScreen('help', 'Справка');
@@ -440,7 +431,7 @@ const App = (() => {
     if (screen) screen.scrollTop = 0;
   }
 
-  return { init, showLevel, showLesson, showLessonAt, showTab, goBack, showToast, getLessons, getData, getCurrentLesson, pushScreen, setTtsMode, showHelp, toggleTheme };
+  return { init, showLevel, showLesson, showLessonAt, showTab, goBack, showToast, getLessons, getData, getCurrentLesson, pushScreen, showHelp, toggleTheme };
 })();
 
 /* ===== LESSON FONT SIZE CONTROL ===== */

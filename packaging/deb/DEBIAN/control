@@ -1,0 +1,12 @@
+Package: tiengviet
+Version: 3.7.0
+Section: education
+Priority: optional
+Architecture: all
+Depends: python3, ca-certificates, xdg-utils
+Maintainer: neo <neo@localhost>
+Homepage: https://localhost/tiengviet
+Description: Tiếng Việt - Vietnamese learning app for Russian speakers
+ Tiếng Việt is a Vietnamese language learning application for Russian
+ speakers. It includes lessons, flashcards, writing practice, search,
+ autoplay and local text-to-speech features.

@@ -2,27 +2,33 @@
 'use strict';
 
 const AutoPlay = (() => {
+  const GAP_MS = 2000;
+
   let _active = false;
   let _paused = false;
   let _stopped = true;
   let _lesson = null;
-  let _btnViClass = '';
   let _currentCard = null;
   let _pauseTimer = null;
   let _bgActive = false;
   let _resolveWait = null;
   let _customLabel = null;
   let _loopMode = false;
+  let _viOnlyMode = false;
+  let _nativeProgressListener = null;
+  let _nativeCompleteListener = null;
 
   function setLesson(lesson, btnViClass, customLabel) {
     _lesson = lesson;
-    _btnViClass = btnViClass;
     _customLabel = customLabel || null;
     _loopMode = false;
   }
 
   function setLoop(enabled) { _loopMode = !!enabled; }
   function getLoop() { return _loopMode; }
+
+  function setViOnly(enabled) { _viOnlyMode = !!enabled; }
+  function getViOnly() { return _viOnlyMode; }
 
   function toggleLoop() {
     _loopMode = !_loopMode;
@@ -36,23 +42,53 @@ const AutoPlay = (() => {
     }
   }
 
+  function toggleViOnly() {
+    if (!_active) {
+      startViOnly();
+    } else {
+      _viOnlyMode = !_viOnlyMode;
+      const plugin = window.Capacitor?.Plugins?.BackgroundTts;
+      if (plugin && typeof plugin.playSequence === 'function') {
+        stop();
+        start();
+        return;
+      }
+      _updateViOnlyBtn();
+      if (typeof App !== 'undefined' && App.showToast) {
+        App.showToast(_viOnlyMode ? 'Режим "Только вьетнамский" включён' : 'Режим "Только вьетнамский" выключен');
+      }
+    }
+  }
+
+  function startViOnly() {
+    if (_active) stop();
+    _viOnlyMode = true;
+    start();
+  }
+
   function toggle() {
     if (_active) stop();
-    else start();
+    else {
+      _viOnlyMode = false;
+      start();
+    }
   }
 
   function togglePause() {
     if (!_active) return;
+    const plugin = window.Capacitor?.Plugins?.BackgroundTts;
     if (_paused) {
       _paused = false;
       document.getElementById('ap-pause-btn').textContent = '⏸';
       document.getElementById('ap-bar-status').textContent = 'Воспроизводится...';
+      try { plugin?.resumeSequence?.(); } catch(e) {}
       if (_resolveWait) { _resolveWait(); _resolveWait = null; }
     } else {
       _paused = true;
       document.getElementById('ap-pause-btn').textContent = '▶';
       document.getElementById('ap-bar-status').textContent = 'Пауза';
-      TTS.stopAll();
+      try { plugin?.pauseSequence?.(); } catch(e) {}
+      if (!plugin?.pauseSequence) TTS.stopAll();
     }
   }
 
@@ -62,9 +98,6 @@ const AutoPlay = (() => {
     if (window.Capacitor?.isPluginAvailable?.('BackgroundTts')) {
       try { window.Capacitor.Plugins.BackgroundTts.enableBackground(); } catch(e) {}
     }
-    // Always run the silent keep-alive: Chromium WebView throttles setTimeout
-    // to once-per-minute when the page is "silent", so we keep an AudioContext
-    // streaming silence to mark the page as actively playing audio.
     _keepAlive();
   }
 
@@ -86,7 +119,6 @@ const AutoPlay = (() => {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       const ctx = new Ctx();
-      // Silent looping buffer so the page stays "audible" even between TTS chunks
       const silentSrc = ctx.createBufferSource();
       silentSrc.buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       silentSrc.loop = true;
@@ -94,7 +126,6 @@ const AutoPlay = (() => {
       gain.gain.value = 0;
       silentSrc.connect(gain).connect(ctx.destination);
       silentSrc.start();
-      // Some WebViews start the context in 'suspended' until a user gesture; resume defensively
       if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
         ctx.resume().catch(() => {});
       }
@@ -104,13 +135,12 @@ const AutoPlay = (() => {
 
   async function start() {
     if (!_lesson) return;
+    TTS.unlockAudio?.();
     _active = true;
     _stopped = false;
     _paused = false;
 
-    // Always run in background-friendly mode: keeps audio alive with screen off
     _enableBackgroundMode();
-
     _updateBtn();
     _showBar();
 
@@ -121,16 +151,27 @@ const AutoPlay = (() => {
       return;
     }
 
+    if (_canUseNativeSequence()) {
+      _startNativeSequence(cards);
+      return;
+    }
+
     let cycle = 1;
     do {
-      await _playCards(cards, 1, cycle);
-      if (_stopped) return;
-      await _playCards(cards, 2, cycle);
-      if (_stopped) return;
+      if (_viOnlyMode) {
+        // В режиме "только вьетнамский" проигрываем только один проход
+        await _playCards(cards, 1, cycle);
+        if (_stopped) return;
+      } else {
+        // Обычный режим: два прохода
+        await _playCards(cards, 1, cycle);
+        if (_stopped) return;
+        await _playCards(cards, 2, cycle);
+        if (_stopped) return;
+      }
       if (_loopMode && !_stopped) {
         cycle += 1;
-        // Brief pause before next cycle
-        await _delay(1200);
+        await _delay(GAP_MS);
         if (_stopped) return;
       }
     } while (_loopMode && !_stopped);
@@ -139,9 +180,64 @@ const AutoPlay = (() => {
     App.showToast('Авто-плей завершён ✓');
   }
 
+  function _canUseNativeSequence() {
+    const plugin = window.Capacitor?.Plugins?.BackgroundTts;
+    return !!(plugin && typeof plugin.playSequence === 'function');
+  }
+
+  async function _startNativeSequence(cards) {
+    const plugin = window.Capacitor.Plugins.BackgroundTts;
+    _removeNativeListeners();
+    _nativeProgressListener = await plugin.addListener?.('sequenceProgress', ev => {
+      if (!_active || !ev) return;
+      const card = cards[ev.index];
+      if (card) _highlightCard(card);
+      _updateStatus(cards.length, ev.index, ev.pass, ev.cycle);
+    });
+    _nativeCompleteListener = await plugin.addListener?.('sequenceComplete', () => {
+      if (!_active || _stopped) return;
+      stop();
+      App.showToast('Авто-плей завершён ✓');
+    });
+
+    const items = cards.map(card => ({
+      vi: card.dataset.vi || card.querySelector('.example-vi')?.textContent?.trim() || '',
+      ru: card.dataset.ru || card.querySelector('.example-ru')?.textContent?.trim() || ''
+    }));
+
+    try {
+      await plugin.playSequence({ items, loop: _loopMode, viOnly: _viOnlyMode, rate: TTS.getRate(), gapMs: GAP_MS });
+    } catch(e) {
+      _removeNativeListeners();
+      await _startJsSequence(cards);
+    }
+  }
+
+  async function _startJsSequence(cards) {
+    let cycle = 1;
+    do {
+      if (_viOnlyMode) {
+        // В режиме "только вьетнамский" проигрываем только один проход
+        await _playCards(cards, 1, cycle);
+        if (_stopped) return;
+      } else {
+        // Обычный режим: два прохода
+        await _playCards(cards, 1, cycle);
+        if (_stopped) return;
+        await _playCards(cards, 2, cycle);
+        if (_stopped) return;
+      }
+      if (_loopMode && !_stopped) {
+        cycle += 1;
+        await _delay(GAP_MS);
+        if (_stopped) return;
+      }
+    } while (_loopMode && !_stopped);
+    stop();
+    App.showToast('Авто-плей завершён ✓');
+  }
+
   function _getAllPlayableCards() {
-    // Use the currently active screen as the source of cards.
-    // This makes AutoPlay work for both lessons and folder-play screens.
     const active = document.querySelector('.screen.active');
     if (!active) return [];
     const vocabSection = active.querySelector('#ls-vocabulary');
@@ -159,36 +255,40 @@ const AutoPlay = (() => {
 
       const viText = card.dataset.vi || card.querySelector('.example-vi')?.textContent?.trim() || '';
       const ruText = card.dataset.ru || card.querySelector('.example-ru')?.textContent?.trim() || '';
-
       const btnVI = card.querySelector('.btn-tts-vi');
       const btnRU = card.querySelector('.btn-tts-ru');
 
-      // Sequence: RU → pause → VI → pause → VI
-      if (pass === 1) {
-        await TTS.speakPromise(ruText, 'ru', btnRU);
+      if (_viOnlyMode) {
+        // Режим "только вьетнамский": вьетнамская фраза - пауза - повтор вьетнамской фразы - пауза
+        await TTS.speakPromise(viText, 'vi', btnVI);
         if (_stopped) return;
-        await _delay(1800);
+        await _delay(GAP_MS);
         if (_stopped) return;
         await TTS.speakPromise(viText, 'vi', btnVI);
         if (_stopped) return;
-        await _delay(1500);
-        if (_stopped) return;
-        await TTS.speakPromise(viText, 'vi', btnVI);
-        if (_stopped) return;
-        await _delay(2000);
+        await _delay(GAP_MS);
       } else {
-        // Second pass: VI only
-        await TTS.speakPromise(viText, 'vi', btnVI);
-        if (_stopped) return;
-        await _delay(2000);
+        // Обычный режим
+        if (pass === 1) {
+          await TTS.speakPromise(ruText, 'ru', btnRU);
+          if (_stopped) return;
+          await _delay(GAP_MS);
+          if (_stopped) return;
+          await TTS.speakPromise(viText, 'vi', btnVI);
+          if (_stopped) return;
+          await _delay(GAP_MS);
+          if (_stopped) return;
+          await TTS.speakPromise(viText, 'vi', btnVI);
+          if (_stopped) return;
+          await _delay(GAP_MS);
+        } else {
+          await TTS.speakPromise(viText, 'vi', btnVI);
+          if (_stopped) return;
+          await _delay(GAP_MS);
+        }
       }
 
-      // Update status bar
-      const allCards = _getAllPlayableCards();
-      const idx = allCards.indexOf(card);
-      const cyclePart = (_loopMode && cycle && cycle > 0) ? `🔁 Цикл ${cycle} · ` : '';
-      document.getElementById('ap-bar-status').textContent =
-        `${cyclePart}Проход ${pass}/2 · Фраза ${idx + 1}/${allCards.length}`;
+      _updateStatus(cards.length, cards.indexOf(card), pass, cycle);
     }
   }
 
@@ -196,15 +296,12 @@ const AutoPlay = (() => {
     while (_paused && !_stopped) {
       await new Promise(resolve => {
         _resolveWait = resolve;
-        setTimeout(resolve, 100); // safety timeout
+        setTimeout(resolve, 100);
       });
     }
   }
 
   function _delay(ms) {
-    // Use plugin-side Handler.postDelayed when available — bypasses Chromium
-    // WebView's background timer throttling (which clamps setTimeout to ~1/min
-    // when the page is hidden, making JS-driven pauses stretch from 1.5s to 60s).
     const plugin = window.Capacitor?.Plugins?.BackgroundTts;
     if (plugin && typeof plugin.delay === 'function') {
       return plugin.delay({ ms }).catch(() => new Promise(resolve => {
@@ -225,6 +322,17 @@ const AutoPlay = (() => {
     }
   }
 
+  function _updateStatus(total, idx, pass, cycle) {
+    const status = document.getElementById('ap-bar-status');
+    if (!status) return;
+    const cyclePart = (_loopMode && cycle && cycle > 0) ? `🔁 Цикл ${cycle} · ` : '';
+    if (_viOnlyMode) {
+      status.textContent = `${cyclePart}Фраза ${idx + 1}/${total}`;
+    } else {
+      status.textContent = `${cyclePart}Проход ${pass}/2 · Фраза ${idx + 1}/${total}`;
+    }
+  }
+
   function _updateBtn() {
     const btn = document.getElementById('ap-toggle-btn');
     if (!btn) return;
@@ -235,6 +343,14 @@ const AutoPlay = (() => {
       btn.textContent = '▶ Авто-плей';
       btn.classList.remove('active');
     }
+    _updateViOnlyBtn();
+  }
+
+  function _updateViOnlyBtn() {
+    const btn = document.getElementById('ap-vionly-btn');
+    if (!btn) return;
+    btn.textContent = _viOnlyMode && _active ? '🇻🇳 Вьет-плей: ВКЛ' : '🇻🇳 Вьет-плей';
+    btn.classList.toggle('active', _viOnlyMode && _active);
   }
 
   function _showBar() {
@@ -258,6 +374,8 @@ const AutoPlay = (() => {
     _paused = false;
     if (_pauseTimer) { clearTimeout(_pauseTimer); _pauseTimer = null; }
     if (_resolveWait) { _resolveWait(); _resolveWait = null; }
+    try { window.Capacitor?.Plugins?.BackgroundTts?.stopSequence?.(); } catch(e) {}
+    _removeNativeListeners();
     TTS.stopAll();
     if (_currentCard) { _currentCard.classList.remove('ap-active'); _currentCard = null; }
     _updateBtn();
@@ -265,5 +383,12 @@ const AutoPlay = (() => {
     _disableBackgroundMode();
   }
 
-  return { setLesson, toggle, togglePause, toggleLoop, setLoop, getLoop, stop };
+  function _removeNativeListeners() {
+    try { _nativeProgressListener?.remove?.(); } catch(e) {}
+    try { _nativeCompleteListener?.remove?.(); } catch(e) {}
+    _nativeProgressListener = null;
+    _nativeCompleteListener = null;
+  }
+
+  return { setLesson, toggle, togglePause, toggleLoop, toggleViOnly, startViOnly, setLoop, getLoop, setViOnly, getViOnly, stop };
 })();

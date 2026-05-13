@@ -374,6 +374,13 @@ html, body {
   border-color: rgba(255,255,255,0.7);
   font-weight: 700;
 }
+.ap-controls .tts-mode-btn {
+  min-width: 158px;
+  justify-content: center;
+}
+.ap-controls .tts-mode-btn:not(.active) {
+  background: rgba(255,255,255,0.08);
+}
 .ap-speed-btn {
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.25);
@@ -386,24 +393,6 @@ html, body {
   border-color: rgba(255,255,255,0.6);
   font-weight: 700;
 }
-.tts-mode-row { margin-top: 8px; }
-.tts-mode-label {
-  color: white; font-size: 14px; opacity: 0.85;
-  margin-right: 4px;
-}
-.tts-mode-btn {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25);
-  color: white; border-radius: 16px;
-  padding: 5px 13px; font-size: 14px;
-  cursor: pointer; transition: all 0.2s;
-}
-.tts-mode-btn.active {
-  background: rgba(255,255,255,0.35);
-  border-color: rgba(255,255,255,0.7);
-  font-weight: 700;
-}
-
 /* ===== LESSON SECTIONS ===== */
 .lesson-section {
   background: var(--bg-card); border-radius: var(--radius);
@@ -518,11 +507,17 @@ html, body {
 .folder-info { flex: 1; }
 .folder-name { font-size: 20px; font-weight: 600; }
 .folder-count { font-size: 16px; color: var(--text-muted); }
-.folder-btns { display: flex; gap: 6px; }
+.folder-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .folder-study-btn {
   background: var(--accent); color: white;
   border: none; border-radius: 16px;
   padding: 6px 14px; font-size: 17px; font-weight: 600;
+  cursor: pointer;
+}
+.folder-viet-play-btn {
+  background: #0f766e; color: white;
+  border: none; border-radius: 16px;
+  padding: 6px 12px; font-size: 15px; font-weight: 700;
   cursor: pointer;
 }
 .folder-play-btn {

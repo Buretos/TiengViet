@@ -189,6 +189,9 @@ const Cards = (() => {
       const playBtn = count > 0
         ? `<button class="folder-play-btn" title="Авто-плей папки" onclick="event.stopPropagation();Cards.playFolder('${f.id}')">▶</button>`
         : '';
+      const vietPlayBtn = count > 0
+        ? `<button class="folder-viet-play-btn" title="Вьет-плей папки" onclick="event.stopPropagation();Cards.playFolder('${f.id}', true)">Вьет-плей</button>`
+        : '';
       const studyBtn = count > 0
         ? `<button class="folder-study-btn" onclick="event.stopPropagation();Cards.studyFolder('${f.id}')">Учить</button>`
         : '';
@@ -204,6 +207,7 @@ const Cards = (() => {
         </div>
         <div class="folder-btns">
           ${playBtn}
+          ${vietPlayBtn}
           ${studyBtn}
           ${delBtn}
         </div>
@@ -315,7 +319,8 @@ const Cards = (() => {
     _startStudy(cards, _folders[folderId]?.name || 'Карточки');
   }
 
-  function playFolder(folderId) {
+  function playFolder(folderId, viOnly) {
+    TTS.unlockAudio?.();
     const folder = _folders[folderId];
     if (!folder) return;
     const cards = Object.values(_cards).filter(c => c.folderId === folderId);
@@ -349,12 +354,9 @@ const Cards = (() => {
         <button class="ap-speed-btn" data-speed="0.5" onclick="TTS.setSpeed(0.5, this)">🐢</button>
         <button class="ap-speed-btn active" data-speed="1.0" onclick="TTS.setSpeed(1.0, this)">🚶</button>
         <button class="ap-speed-btn" data-speed="1.6" onclick="TTS.setSpeed(1.6, this)">🏃</button>
+        ${TTS.renderModeButton()}
+        <button class="btn-ap" id="ap-vionly-btn" onclick="AutoPlay.startViOnly()">🇻🇳 Вьет-плей</button>
         <button class="btn-ap" id="ap-loop-btn" onclick="AutoPlay.toggleLoop()">🔁 Повтор</button>
-      </div>
-      <div class="ap-controls tts-mode-row">
-        <span class="tts-mode-label">🎙️ Движок:</span>
-        <button class="tts-mode-btn ${TTS.getMode()==='gtranslate'?'active':''}" data-mode="gtranslate" onclick="App.setTtsMode('gtranslate')">🌐 Google Translate</button>
-        <button class="tts-mode-btn ${TTS.getMode()==='webspeech'?'active':''}" data-mode="webspeech" onclick="App.setTtsMode('webspeech')">🔵 Системный TTS</button>
       </div>
     </div>
     <div class="lesson-section">
@@ -370,7 +372,10 @@ const Cards = (() => {
     );
     App.pushScreen('folder-play', folder.name);
     // Auto-start playback after navigation (DOM is rendered, screen is active)
-    setTimeout(() => AutoPlay.toggle(), 80);
+    setTimeout(() => {
+      if (viOnly) AutoPlay.startViOnly();
+      else AutoPlay.toggle();
+    }, 80);
   }
 
   function _startStudy(cards, title) {

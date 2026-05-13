@@ -29,6 +29,7 @@ android/.idea/
 capacitor.config.local.json
 
 # Build outputs (на всякий случай — должны идти через GitHub Releases)
+dist/
 *.apk
 *.aab
 *.exe

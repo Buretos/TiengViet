@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Tiếng Việt
+Comment=Вьетнамский язык для русскоязычных
+Exec=tiengviet
+Icon=tiengviet
+Terminal=false
+Categories=Education;Languages;
+StartupNotify=true

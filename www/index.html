@@ -232,23 +232,6 @@
       </details>
 
       <details class="help-section">
-        <summary>🎙️ Переключатель TTS-движка</summary>
-        <div class="help-body">
-          <p>В шапке урока и плеера папки есть переключатель:</p>
-          <ul>
-            <li><b>🌐 Google Translate</b> — голос Google Translate. Нужен интернет</li>
-            <li><b>🔵 Системный TTS</b> — голоса операционной системы</li>
-          </ul>
-          <p><b>Что выбирать:</b></p>
-          <ul>
-            <li><b>Android:</b> 🔵 Системный TTS — там встроенный Google TTS работает идеально</li>
-            <li><b>Windows:</b> 🌐 Google Translate — в Windows нет голоса vi-VN, и Google проксируется через приложение</li>
-          </ul>
-          <p>При сбое Google Translate на Windows автоматически сработает резерв — увидите красное предупреждение «⚠️ Google TTS недоступен — играю системным голосом».</p>
-        </div>
-      </details>
-
-      <details class="help-section">
         <summary>▶ Авто-плей урока</summary>
         <div class="help-body">
           <p>Последовательность для каждой фразы:</p>
@@ -346,7 +329,6 @@
             <li><code>viet_cards</code> — карточки</li>
             <li><code>viet_folders</code> — папки</li>
             <li><code>viet_progress</code> — прогресс по урокам</li>
-            <li><code>viet_tts_mode</code> — выбор движка TTS</li>
           </ul>
           <p><b>Базы Android и Windows независимы.</b> Для синхронизации используйте 📤 Экспорт / 📥 Импорт.</p>
           <p><b>Совет:</b> делайте экспорт перед обновлением приложения или сменой устройства. Файл маленький (~1–10 KB).</p>
@@ -356,8 +338,7 @@
       <details class="help-section">
         <summary>❓ Частые вопросы</summary>
         <div class="help-body">
-          <p><b>Первая фраза 🔊 запускается с задержкой.</b><br>TTS грузит mp3 / инициализирует движок. Следующие фразы — мгновенно.</p>
-          <p><b>На Windows вьетнамский звучит странно или по-русски.</b><br>Активен 🔵 Системный TTS, в Windows нет голоса vi-VN. Переключите на 🌐 Google Translate.</p>
+          <p><b>Первая фраза 🔊 запускается с задержкой.</b><br>TTS инициализирует системный движок. Следующие фразы — быстрее.</p>
           <p><b>Импорт ничего не делает.</b><br>Файл должен быть JSON именно от этого приложения (с полем <code>"app": "viet-learn"</code>).</p>
           <p><b>Хочу очистить все карточки.</b><br>Импортируйте пустой файл в режиме ♻️ Заменить.</p>
         </div>
